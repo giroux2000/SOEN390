@@ -26,6 +26,39 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
 
+function makeQuery(stateQuery,paramArray, requestRecieve,resultSend, debugComment='', returnType){
+    //returnType 0 is a send, returnType 1 is a 
+    if(typeOf (paramArray)!= "Array"){
+        console.log("Error: Parameters are not in array")
+    }
+    if (returnType = 0){
+        db.query(stateQuery,paramArray,(error, dbResult)=>{
+            if(error){
+                console.log("Statement: "+stateQuery+ '\n\n'+error)
+            }
+            else {
+                console.log(debugComment);
+                resultSend.send(dbResult);
+            }
+        })
+    }
+
+    //returnType is 1 if a status code is sufficient
+    if (returnType = 1){
+        db.query(stateQuery,paramArray,(error, dbResult)=>{
+            if(error){
+                console.log("Statement: "+stateQuery+ '\n\n'+error)
+            }
+            else {
+                console.log(debugComment);
+                console.log(dbResult)
+                resultSend.send(dbResult);
+            }
+        })
+    }
+
+}
+
 app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "http://localhost:3000");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
