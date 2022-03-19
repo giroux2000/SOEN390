@@ -7,7 +7,7 @@ const mysql = require("mysql2");
 const cors = require('cors');
 const { request } = require('http');
 const mail = require('nodemailer');
-
+const queryDB = require('./databaseMethods.js')
 
 var cookieParser = require('cookie-parser')
 app.use(express.json());
@@ -26,38 +26,6 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
 
-function makeQuery(stateQuery,paramArray, requestRecieve,resultSend, debugComment='', returnType){
-    //returnType 0 is a send, returnType 1 is a 
-    if(typeOf (paramArray)!= "Array"){
-        console.log("Error: Parameters are not in array")
-    }
-    if (returnType = 0){
-        db.query(stateQuery,paramArray,(error, dbResult)=>{
-            if(error){
-                console.log("Statement: "+stateQuery+ '\n\n'+error)
-            }
-            else {
-                console.log(debugComment);
-                resultSend.send(dbResult);
-            }
-        })
-    }
-
-    //returnType is 1 if a status code is sufficient
-    if (returnType = 1){
-        db.query(stateQuery,paramArray,(error, dbResult)=>{
-            if(error){
-                console.log("Statement: "+stateQuery+ '\n\n'+error)
-            }
-            else {
-                console.log(debugComment);
-                console.log(dbResult)
-                resultSend.send(dbResult);
-            }
-        })
-    }
-
-}
 
 app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "http://localhost:3000");
@@ -667,63 +635,24 @@ app.get("/doctorViewingAllPatientData", (req, res) => {
 });
 
 
-//Finds the next day in the calenda
-function getNextDayOfTheWeek(dayName, excludeToday = true, refDate = new Date()) {
-    const dayOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(dayName.slice(0, 3).toLowerCase());
-    if (dayOfWeek < 0) return;
-    refDate.setHours(0, 0, 0, 0);
-    refDate.setDate(refDate.getDate() + +!!excludeToday +
-        (dayOfWeek + 7 - refDate.getDay() - +!!excludeToday) % 7);
-    return refDate;
-}
-
-
-//creates the array that is returned to Client
-function arrayMaker(result) {
-    // console.log(result)
-    const returnedAvails = [];
-    for (let i = 0; i < Object.keys(result).length; i++) {
-        if (result[i]["dayName"] != null) {
-            //putting the appointment in the right format
-            // console.log()
-            // returnedAvails.push(`${result[i]["dayName"]} ${result[i]["StartTime"]} - ${result[i]["EndTime"]}`)
-            returnedAvails.push("" + getNextDayOfTheWeek(result[i]["dayName"], true).toString().slice(0, 15) + " " + result[i]["StartTime"] + " - " + result[i]["EndTime"])
-        }
-
-    }
-    console.log(returnedAvails);
-    return returnedAvails;
-}
-
-
 //see open appointments
 app.get("/seeOpenAppointments", (req, res) => {
     //getting ID from client
     let patientID = req.query["id"];
     console.log("Patient ID: " + patientID);
-    // state = "SELECT StartTime,EndTime,dh.dayName, dh.doctorID, u.FName, u.LName FROM 390db.doctorhours dh, 390db.users u WHERE dh.doctorid = (SELECT DoctorID from 390db.patients p where id = 1) and dh.DoctorID= u.id and dh.Availability = 1;"
-    //non-hard coded 
-    state = "SELECT StartTime,EndTime,dh.dayName, dh.doctorID, u.FName, u.LName FROM 390db.doctorhours dh, 390db.users u WHERE dh.doctorid = (SELECT DoctorID from 390db.patients p where id = ?) and dh.DoctorID= u.id and dh.Availability = 1;"
+    let state = "SELECT StartTime,EndTime,dh.dayName, dh.doctorID, u.FName, u.LName FROM 390db.doctorhours dh, 390db.users u WHERE dh.doctorid = (SELECT DoctorID from 390db.patients p where id = ?) and dh.DoctorID= u.id and dh.Availability = 1;"
+    
+    result = queryDB.makeQuery(state,[patientID], debugComment='');
+    console.log('Results returned from method: '+result);
 
-    //SELECT StartTime,EndTime,dh.dayName, dh.doctorID, u.FName, u.LName FROM 390db.doctorhours dh, 390db.users u WHERE dh.doctorid = (SELECT DoctorID from 390db.patients p where id = ?) and dh.DoctorID= u.id and dh.Availability = 1;
-    db.query(state, [patientID], (err, result) => {
-        if (err) {
-            console.log("Error: " + err);
-        } else {
-            console.log("Results open: " + result);
-            res.send(arrayMaker(result));
-            // res.send(result);
-
-        }
-    });
+    // res.send(arrayMaker(result));
 }
-)
+);
 
 
 app.post("/makeAppointments", (req, res) => {
     var appointment = req.body.appointmentTime;
     // console.log(appointment)
-
 
     var appointmentArray = appointment.split(/(\s+)/);
     let dayName = appointmentArray[0]
